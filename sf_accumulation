@@ -1,0 +1,216 @@
+---模块一：时间日期
+from_unixtime()--时间戳-日期，时间戳格式的时间，转化为 年月日时分秒格式的时间，from_unixtime的参数要求为整数，且单位为秒
+unix_timestamp()--日期-时间戳
+from_unixtime(unix_timestamp(ur.request_time), 'yyyy-MM-dd') as date_time--日期转化成标准的年月日 'yyyy-MM-dd HH:mm:ss'
+
+--string-日期
+--to_unix_timestamp:根据提供的字符串格式（’dd/MMM/yyy:HH:mm:ss Z’）将日期字符串格式化成时间戳
+from_unixtime(to_unix_timestamp(inc_day, 'yyyyMMdd'), 'yyyy-MM-dd') 
+from_unixtime(to_unix_timestamp(request_time, 'dd/MMM/yyy:HH:mm:ss Z'), 'yyyy-MM-dd') --重点：'dd/MMM/yyy:HH:mm:ss Z' '29/Jul/2019:09:12:30 +800'
+date_format() --函数用于以不同的格式显示日期/时间数据 date_format('2017-01-16 09:55:54', 'yyyy-MM-dd')
+
+datediff() 
+date_add()
+date_sub()
+select datediff('2016-08-16','2016-08-11')--返回结束日期减去开始日期的天数
+select date_add('2016-08-16',10)--返回开始日期startdate增加days天后的日期
+select date_sub('2016-08-16',10)--返回开始日期startdate减少days天后的日期
+
+getdate()
+CURRENT_TIMESTAMP --当前的时间
+
+last_day()--返回当前时间的月末日期 last_day('2017-01-16 09:55:54')
+
+select year('2016-08-16 10:03:01') --2016 返回日期中的年
+select month('2016-08-16 10:03:01') --8 返回日期中的月
+select day('2016-08-16 10:03:01') --16 返回日期中的日
+select hour('2016-08-16 10:03:01') --10 返回日期中的时
+select minute('2016-08-16 10:03:01') --3 返回日期中的分
+select second('2016-08-16 10:03:01') --1 返回日期中的秒
+select weekofyear(CURRENT_TIMESTAMP) --返回日期在当前的周数
+
+--时间截取，只有本月和本年第一天
+trunc (from_unixtime(unix_timestamp( CURRENT_TIMESTAMP),'yyyy-MM-dd'),'MM') --截取本月第一天
+trunc (,'YYYY')--截取本年第一天
+
+---模块二：string处理
+select trim(column_name) from table_name --直接对列进行操作,去两边空格，中间空格会保留  相应的：ltrim() ,rtrim()
+SELECT elt(1, 'scala', 'java') FROM src LIMIT 1--elt(n, str1, str2, ...) - returns the n-th string, e.g. returns str2 when n is 2
+cast(ur.cost_time as int) --as float / as date / as string--cast(字段名 as 转换的类型) 
+cast(cast( sum( t.total ) AS DECIMAL ) / cast( count(t.bm_id ) AS DECIMAL ) AS DECIMAL ( 10, 2 ) ) AS last1_month_target  --总共能存10位数字，末尾2位是小数
+substr(cast(end_date as string), 1, 7)--1或0结果一样,默认都是从第一位开始取
+replace(date_sub(from_unixtime(unix_timestamp(), 'yyyy-MM-dd'), 1),'-','')) 
+
+--处理字符串的两个绝招：substring_index,concat
+concat('江苏省','-','南京市','-','玄武区','-','徐庄软件园') == concat_ws('-','江苏省','南京市','玄武区','徐庄软件园')
+substring_index(str,delim,count)--返回字符串str中在第 count 个出现的分隔符 delim之前的子串
+substring_index("blog.jb51.net", ".",2) blog.jb51  --返回正数第二点之前内容
+select substring_index("blog.jb51.net", ".",-1) net --返回倒数第一个之后内容
+substring_index( substring_index(destination_app, '/', 1 ), ':', 1 ) AS domain --domain域名清洗
+split(str, regex)--按照规则截取字符串,返回数组 select split('ab-cd','-')[0] 如果是特殊字段，需要转义，如：select split('大阪酒店|$新丽饭店','\\|\\$')[0]
+rlike--正则表达式 select "kimbo789" rlike '^\\d*$' ; 说明：匹配全数字的字符串
+--A RLIKE B ，表示B是否在A里面即可，而A LIKE B,则表示B是否是A
+AND lower(url) NOT RLIKE '\\.js$|\\.css$|\\.yml$|\\.json$|\\.xml$|\\.png$|\\.tiff$|\\.jpg$|\\.gif$|\\.jpeg$|\\.bmp$|\\.zip$|\\.rar$|\\.txt$|\\.csv$|\\.doc$|\\.docx|\\.xls|\\.xlsx|bootstrap|\\/css|monitor|jmxquery|statu|wsdl|callback|rpc|\\?'
+AND method RLIKE 'GET|HEAD|TRACE|OPTIONS'
+
+
+select regexp_replace('www.tuniu.com','tuniu','jd') regexp_replace(string A, string B, string C)--字符串替换函数，将字符串A中的B用C替换 
+select repeat('ab',3)--repeat(string str, int n) 重复N次字符串 
+select lpad('ab',7,'k')--lpad(string str, int len, string pad) 将字符串str用pad进行左补足到len位(如果位数不足的话)
+select rpad('ab',7,'k')--rpad(string str, int len, string pad) 将字符串str用pad进行右补足到len位(如果位数不足的话)
+
+---模块三：建模
+1.外部导入excel到bdp：
+--Excel数据导入
+step1:创建空表
+drop table if exists dm_bds_core.dm_bds_acc_worktime_update_201909;
+create table dm_bds_core.dm_bds_acc_worktime_update_201909 
+(	
+  month_year string COMMENT '年月',
+	business_line string COMMENT '业务线'
+)row format delimited fields terminated by ',';
+--txt:row format delimited fields terminated by '\t';
+
+step2：导入外部csv表（excel-csv-txt改成utf-8-csv utf-8）
+load data inpath '/user/01387139/upload/test_201909.csv' into table dm_bds_core.dm_bds_acc_worktime_update_201909;
+
+step3: 将已经有的表导入新建的表（避免有错误）
+insert into table dm_bds_core.dm_bds_acc_worktime_update_201909 --向_201909表里插入以前数据的内容
+SELECT * from dm_bds_core.dm_bds_acc_worktime_update;
+
+2.bdp里创建新表
+drop table  dm_bds_core.cloud_bill_mid;
+create table dm_bds_core.cloud_bill_mid
+(	
+	account_no string COMMENT '',
+	mapping_cmdb string COMMENT ''
+) COMMENT '中间表'
+partitioned by (inc_day string COMMENT '同步日期')
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+STORED AS PARQUET;
+
+insert into table dm_bds_core.cloud_bill_mid partition(inc_day = '$[time(yyyyMMdd,-1d)]')
+select * from
+(
+)temp
+
+
+3.bdp抽mysql业务库数据建表
+CREATE EXTERNAL TABLE `tbls`(
+  `tbl_id` bigint COMMENT '', 
+  `create_time` int COMMENT '', 
+  `db_id` bigint COMMENT '', 
+  `last_access_time` int COMMENT '', 
+  `owner` string COMMENT '', 
+  `retention` int COMMENT '', 
+  `sd_id` bigint COMMENT '', 
+  `tbl_name` string COMMENT '', 
+  `tbl_type` string COMMENT '', 
+  `view_expanded_text` string COMMENT '', 
+  `view_original_text` string COMMENT '', 
+  `link_target_id` bigint COMMENT '')
+COMMENT ''
+PARTITIONED BY ( 
+  `inc_day` string)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+
+---模块四：其他
+update语句：
+update 表名 set id='123' where name='tom';
+
+show create table --表创建信息
+desc --表字段信息
+show tables;--显示数据库中的表
+show tables like '*driver*'; --显示包含driver的数据表名称 
+show partitions tt_driver_task; --显示表的分区信息
+
+
+--Hive中collect相关的函数
+collect_list()--将分组中的某列转为一个数组返回，不同的是collect_list不去重而collect_set去重
+collect_set()
+
+--WITH AS的含义：子查询部分,定义一个SQL片断,该SQL片断会被整个SQL语句用到
+
+
+--if()与ifnull()的区别
+IF( expr1 , expr2 , expr3 )--expr1条件，条件为true，则值是expr2 ，false，值就是expr3
+IFNULL( expr1 , expr2 )--expr1的值不为NULL的情况下都返回 expr1，否则返回 expr2
+IFNULL(IF(a.sys_code="",NULL, a.sys_code), "-")
+
+coalesce()--将控制替换成其他值&返回第一个非空值
+select coalesce(success_cnt, 1) from tableA --当success_cnt为null值的时候，将返回1，否则将返回success_cnt的真实值
+select coalesce(success_cnt,period,1) from tableA --当success_cnt不为null，那么无论period是否为null，都将返回success_cnt的真实值（因为success_cnt是第一个参数），当success_cnt为null，而period不为null的时候，返回period的真实值。只有当success_cnt和period均为null的时候，将返回1。
+
+nvl(T value, T default_value)--如果T is null ，返回默认值
+
+greatest(T v1, T v2, ...)--返回最大值，会过滤null  least(T v1, T v2, ...) 返回最小值，会过滤null select greatest('2016-01-01',NULL,'2017-01-01')
+
+rand()--返回0-1的随机值。rand(INT seed) 返回固定的随机值
+
+where not (name!='李四' or id='2006003') == where name='李四' and id!='2006003'
+where not (name!='赵璐' and id='2006003') == where name='赵璐' or id!='2006003'
+
+--设置参数
+set bd=;
+set ed=;
+select  from  where date_time >= ${hiveconf:bd} and date_time < ${hiveconf:ed};
+
+ucase(sys_code)--转大写
+lcase(domain)--转小写
+--Hive创建表操作(需要再总结)见G:\2.学习\2.培训资料\5.sql\hive sql入门
+
+''和 is null 区别：""是空的字符串，不过里面没有内容  Null 缺失，不占用内存空间
+
+
+hive中的lateral view 与 explode函数
+https://blog.csdn.net/guodong2k/article/details/79459282
+作用：经过ETL过程解析json数据
+1.explode作用：
+(1)拆解array字段
+select explode(split(goods_id,',')) as goods_id from XXX--数组每个元素在一行
+(2)拆解map字段
+select explode(split(area,',')) as area from XXX--映射每个映射在一行
+(3)拆解json字段
+step1:先把这个字段拆成list
+select explode(split(regexp_replace(regexp_replace(sale_info,'\\[\\{',''),'}]',''),'},\\{')) as  sale_info from XXX
+step2:用get_json_object来获取key为monthSales的数据
+select get_json_object(explode(split(regexp_replace(regexp_replace(sale_info,'\\[\\{',''),'}]',''),'},\\{')),'$.monthSales') as  sale_info from  XXX
+
+2.lateral view(侧视图)作用：配合explode（或者其他的UDTF），一个语句把单行数据拆解成多行数据结果集
+select goods_id2,sale_info 
+from explode_lateral_view 
+LATERAL VIEW explode(split(goods_id,','))goods as goods_id2;
+
+select goods_id2,sale_info,area2
+from explode_lateral_view 
+LATERAL VIEW explode(split(goods_id,','))goods as goods_id2 
+LATERAL VIEW explode(split(area,','))area as area2;
+
+
+SELECT distinct a 
+from(
+  select a,b 
+  from dm_bds_core.group_index_data_temp_lyx t 
+  LATERAL VIEW explode(str_to_map(regexp_replace(regexp_replace(regexp_replace(data,'\"',''),'\\{',''),'\\}',''), ',', ':')) tt as a,b 
+  ) t1
+
+
+--BDP Hive分区表
+--分区列不是表中的实际字段，而是一个或者多个伪列，可查询过滤
+--即表的数据文件中实际上不保存分区列的信息与数据
+--在BDP平台上，通过可视化建表，增加分区字段，然后在ETL任务或hive任务中使用已配置的参数
+insert overwrite table dm_bds_core.dm_bds_sys_duty_matrix_cmdb_info partition(inc_day='$[time(yyyyMMdd,-1d)]')--返回调度实例日期减去1天
+SELECT * from table_name
+--insert overwrite覆盖原表所有信息
+
+
+A left join B on  and
+--on 后面的条件，其实就是对 B 数据的过滤，
+--如果对A 的数据过滤，或对关联结果的过滤，要放在 where 后；
+
+
