@@ -123,6 +123,15 @@ OUTPUTFORMAT
 update语句：
 update 表名 set id='123' where name='tom';
 
+hive添加一条记录
+insert into table 
+dm_bds_core.dm_bds_cloud_inn_tenement_to_user_map
+select "01376676","庄桐奎","TONGKUIZHUANG@SFMAIL.SF-EXPRESS.COM","丰e足食项目系统信息部","10027456","丰e足食项目","20200228"
+--hive修改数据
+1、新建调度HIVE
+2、新建分区
+3、hivesql-干净数据+union+清洗数据
+
 show create table --表创建信息
 desc --表字段信息
 show tables;--显示数据库中的表
