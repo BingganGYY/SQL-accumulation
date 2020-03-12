@@ -1,0 +1,8 @@
+01 hive 新增字段
+alter table table_name add columns(column_name string)--修改表结构语句
+alter table table_name partition(partition_name='分区值') add columns(column_name string)
+
+02 hive 查找一列重复的值
+select sn from 
+(select sn,count(1)over(PARTITION by sn) ct from dm_bds_core.resource_life_cycle_server_mid)t
+where ct>1
