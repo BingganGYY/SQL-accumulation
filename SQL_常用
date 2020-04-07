@@ -6,3 +6,14 @@ alter table table_name partition(partition_name='分区值') add columns(column_
 select sn from 
 (select sn,count(1)over(PARTITION by sn) ct from dm_bds_core.resource_life_cycle_server_mid)t
 where ct>1
+
+03 hive添加一条记录
+insert into table dm_bds_core.dm_bds_cloud_inn_tenement_to_user_map
+select "01376676","庄桐奎","TONGKUIZHUANG@SFMAIL.SF-EXPRESS.COM","丰e足食项目系统信息部","10027456","丰e足食项目","20200228"
+
+04 删除分区数据
+alter table dm_bds_core.tdata_department_business_line drop partition(inc_day = '20200326')
+
+05 外部表改内部表
+alter table dm_bds_core.tdata_department_business_line set tblproperties('external'='true')
+
